@@ -5,7 +5,7 @@ This library was developed with the idea to help us to create punctuation restor
 **Feel free to fork this repo and edit model or dataset classes for your purposes.**
 
 ## Prerequirements
- 
+ - NOt all
  - Python 3.9 *for training*
  - Docker *for production*
   
