@@ -5,10 +5,10 @@ import torch
 from transformers.tokenization_utils import PreTrainedTokenizer
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
-from neuro_comma.dataset import BaseDataset
-from neuro_comma.model import CorrectionModel
-from neuro_comma.pretrained import PRETRAINED_MODELS
-from neuro_comma.utils import get_last_pretrained_weight_path, load_params
+from src.neuro_comma.dataset import BaseDataset
+from src.neuro_comma.model import CorrectionModel
+from src.neuro_comma.pretrained import PRETRAINED_MODELS
+from src.neuro_comma.utils import get_last_pretrained_weight_path, load_params
 
 
 class BasePredictor:

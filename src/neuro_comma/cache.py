@@ -1,6 +1,6 @@
 import threading
 
-from neuro_comma.predict import RepunctPredictor
+from src.neuro_comma.predict import RepunctPredictor
 
 
 class ModelCache(object):

@@ -9,5 +9,6 @@ RUN venv/bin/pip install torch==1.8.1+cpu -f https://download.pytorch.org/whl/to
 RUN venv/bin/pip install -r requirements.txt
 
 COPY src src
+COPY app.py .
 EXPOSE 5000
 ENTRYPOINT ["venv/bin/python", "app.py"]

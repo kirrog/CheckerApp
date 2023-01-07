@@ -10,8 +10,9 @@ app = Flask(__name__)
 
 @app.route('/')
 def hello_world():  # put application's code here
-    return 'Hello World!\n To use this app send POST request on /req with json of template\n ' \
-           '{\"text\":\"Текст на русском, где потребуются запятые и прочие знаки препинания.\"}'
+    return '<div>Hello World!<div>' \
+           '<div>To use this app send POST request on /req with json of template<div>' \
+           '<div>{\"text\":\"Текст на русском, где потребуются исправления.\"}<div>'
 
 
 @app.route('/req', methods=['POST'])

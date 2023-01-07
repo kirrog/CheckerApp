@@ -4,9 +4,9 @@ from typing import Dict, Optional, Union
 
 import torch
 import torch.nn as nn
-from torch.tensor import Tensor
+from torch import Tensor
 
-from neuro_comma.pretrained import PRETRAINED_MODELS
+from src.neuro_comma.pretrained import PRETRAINED_MODELS
 
 Path_type = Union[Path, str, os.PathLike]
 
