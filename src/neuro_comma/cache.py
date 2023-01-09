@@ -18,7 +18,7 @@ class ModelCache(object):
             with self._lock:
                 if self._model is None:
                     # загружаем модель
-                    self._model = RepunctPredictor('repunct-model', model_weights='weights_ep4_9910.pt')
+                    self._model = RepunctPredictor('repunct-model', model_weights='weights_ep6_9912.pt')
 
     @property
     def model(self) -> RepunctPredictor:

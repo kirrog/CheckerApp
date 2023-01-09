@@ -8,14 +8,19 @@ class MyEncoder(JSONEncoder):
 
 
 class ChangeFormats:
-    before: str
-    after: str
+    action: str
+    change: str
     reason: str
+    position: int
 
-    def __init__(self, before: str, after: str, reason: str):
-        self.before = before
-        self.after = after
+    def __init__(self, action: str, change: str, reason: str, position: int):
+        self.action = action
+        self.change = change
         self.reason = reason
+        self.position = position
+
+    def __str__(self):
+        return "{" + f"\"action\":\"{self.action}\", \"change\":\"{self.change}\", \"reason\":\"{self.reason}\", \"position\":\"{self.position}" + "}"
 
 
 class CheckerRequestFormat:
