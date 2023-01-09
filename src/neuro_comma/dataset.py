@@ -41,8 +41,9 @@ class BaseDataset(torch.utils.data.Dataset):
             list[Batch]: each having sequence_len punctuation_mask is used to ignore special indices like padding and intermediate sub-word token during evaluation
         """
         with open(file_path, 'r', encoding='utf-8') as file:
+            data = file.read().split("\n")
             x, y = [], []
-            for i, line in enumerate(file):
+            for i, line in enumerate(data):
                 if (line := line.strip()):
                     token = line.rsplit('\t', 1)
                     if len(token) == 2:
@@ -92,32 +93,34 @@ class BaseDataset(torch.utils.data.Dataset):
         debug = kwargs.get('debug')
         if debug:
             pbar = tqdm(total=len(tokens))
-
         while idx < len(tokens):
             x = [TOKEN_IDX[token_style]['START_SEQ']]
-            w_id = [-1]    # word indexes
+            w_id = [-1]  # word indexes
             y = [0]
             y_mask = [1] if targets else [0]
-
+            length_counter = len(x)
             # loop until we have required sequence length
             # -1 because we will have a special end of sequence token at the end
-            while len(x) < seq_len - 1 and idx < len(tokens):
+            while length_counter < seq_len - 1 and idx < len(tokens):
                 word_pieces = tokenizer.tokenize(tokens[idx])
 
                 # if taking these tokens exceeds sequence length we finish
                 # current sequence with padding
                 # then start next sequence from this token
-                if len(word_pieces) + len(x) >= seq_len:
+                if len(word_pieces) + length_counter >= seq_len:
                     break
                 for i in range(len(word_pieces) - 1):
                     x.append(tokenizer.convert_tokens_to_ids(word_pieces[i]))
+                    length_counter += 1
                     w_id.append(idx)
                     y.append(0)
                     y_mask.append(0)
                 if len(word_pieces) > 0:
                     x.append(tokenizer.convert_tokens_to_ids(word_pieces[-1]))
+                    length_counter += 1
                 else:
                     x.append(TOKEN_IDX[token_style]['UNK'])
+                    length_counter += 1
 
                 w_id.append(idx)
 
@@ -133,6 +136,7 @@ class BaseDataset(torch.utils.data.Dataset):
                     pbar.update(1)
 
             x.append(TOKEN_IDX[token_style]['END_SEQ'])
+            length_counter += 1
             w_id.append(-1)
             y.append(0)
             if targets:
@@ -141,7 +145,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 y_mask.append(0)
 
             # Fill with pad tokens
-            if len(x) < seq_len:
+            if length_counter < seq_len:
                 x = x + [TOKEN_IDX[token_style]['PAD'] for _ in range(seq_len - len(x))]
                 w_id = w_id + [-100 for _ in range(seq_len - len(w_id))]
                 y = y + [0 for _ in range(seq_len - len(y))]
@@ -165,12 +169,12 @@ class BaseDataset(torch.utils.data.Dataset):
         y = self.data[index][3]
         y_mask = self.data[index][4]
 
-        x = torch.tensor(x)                     # type: ignore
-        attn_mask = torch.tensor(attn_mask)     # type: ignore
-        y = torch.tensor(y)                     # type: ignore
-        y_mask = torch.tensor(y_mask)           # type: ignore
+        x = torch.tensor(x)  # type: ignore
+        attn_mask = torch.tensor(attn_mask)  # type: ignore
+        y = torch.tensor(y)  # type: ignore
+        y_mask = torch.tensor(y_mask)  # type: ignore
 
-        return x, y, attn_mask, y_mask          # type: ignore
+        return x, y, attn_mask, y_mask  # type: ignore
 
 
 class RepunctDataset(BaseDataset):
@@ -239,9 +243,9 @@ class RepunctDataset(BaseDataset):
         if self.is_train and self.augment_rate > 0:
             x, y, attn_mask, y_mask = self._augment(x, y, y_mask)
 
-        x = torch.tensor(x)                     # type: ignore
-        attn_mask = torch.tensor(attn_mask)     # type: ignore
-        y = torch.tensor(y)                     # type: ignore
-        y_mask = torch.tensor(y_mask)           # type: ignore
+        x = torch.tensor(x)  # type: ignore
+        attn_mask = torch.tensor(attn_mask)  # type: ignore
+        y = torch.tensor(y)  # type: ignore
+        y_mask = torch.tensor(y_mask)  # type: ignore
 
-        return x, y, attn_mask, y_mask          # type: ignore
+        return x, y, attn_mask, y_mask  # type: ignore
