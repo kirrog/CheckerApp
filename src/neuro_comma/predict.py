@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Dict, Optional, Type, Union
 
 import torch
 from transformers.tokenization_utils import PreTrainedTokenizer
