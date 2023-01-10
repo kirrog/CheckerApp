@@ -10,6 +10,6 @@ RUN venv/bin/pip install -r requirements.txt
 
 COPY src src
 COPY app.py .
-COPY models/repunct-model/weights/weights_ep6_9912.pt models/repunct-model/weights/weights_ep6_9912.pt
+COPY models/repunct-model models/repunct-model
 EXPOSE 5000
 ENTRYPOINT ["venv/bin/python", "app.py"]
