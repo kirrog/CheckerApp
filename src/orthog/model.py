@@ -14,20 +14,15 @@ Path_type = Union[Path, str, os.PathLike]
 
 class CorrectionModel(nn.Module):
     def __init__(self,
-                 pretrained_model: str = "",
+                 pretrained_model: str,
                  freeze_pretrained: Optional[bool] = False,
                  *args,
                  **kwargs) -> None:
 
         super(CorrectionModel, self).__init__()
 
-        if pretrained_model == "DeepPavlov/rubert-base-cased-sentence":
-            self.pretrained_transformer = AutoModel.from_pretrained(
-                "/home/kirrog/projects/CheckerApp/models/rubert_pretrained")
-            self.hidden_size = 768
-        if pretrained_model != "":
-            self.pretrained_transformer = PRETRAINED_MODELS[pretrained_model][0].from_pretrained(pretrained_model)
-            self.hidden_size = PRETRAINED_MODELS[pretrained_model][2]
+        self.pretrained_transformer = PRETRAINED_MODELS[pretrained_model][0].from_pretrained(pretrained_model)
+        self.hidden_size = PRETRAINED_MODELS[pretrained_model][2]
 
         if freeze_pretrained:
             for p in self.pretrained_transformer.parameters():

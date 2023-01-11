@@ -18,7 +18,7 @@ class ModelCache(object):
             with self._lock:
                 if self._model is None:
                     # загружаем модель
-                    self._model = ReorthPredictor('reorth-model', model_weights='weights_ep6_9912.pt')
+                    self._model = ReorthPredictor('DeepPavlov/rubert-base-cased-sentence')
 
     @property
     def model(self) -> ReorthPredictor:
