@@ -29,6 +29,8 @@ class BasePredictor:
             # self.params = load_params(Path("models/reorth-model"))
             self.params = load_params(Path("/home/kirrog/projects/CheckerApp/models/reorth-model"))
             self.dataset_class = dataset_class
+            self.model.to(self.device)
+            self.model.eval()
         else:
             model_dir = models_root / model_name
             self.params = load_params(model_dir)
@@ -70,14 +72,17 @@ class ReorthPredictor(BasePredictor):
                                                             self.tokenizer,
                                                             seq_len,
                                                             token_style))
+        x_indecies = torch.tensor([0])
+        x = torch.index_select(data, 1, x_indecies).reshape(2, -1).to(self.device)
+
+        attn_mask_indecies = torch.tensor([1])
+        attn_mask = torch.index_select(data, 1, attn_mask_indecies).reshape(2, -1).to(self.device)
 
         with torch.no_grad():
-            r = []
-            for case in data:
-                y_predict = self.model(case[0], case[1])
-                t = self.dataset_class.tokenizer.decode(y_predict)
-                r.append(t)
-            result = " ".join(r)
-
-        result = result.strip()
-        return result
+            y_predict = self.model(x, attn_mask)
+        return y_predict
+        #     result = self.tokenizer.decode(y_predict)
+        #
+        #
+        # result = result.strip()
+        # return result

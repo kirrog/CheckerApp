@@ -14,6 +14,8 @@ from src.orthog.pretrained import TOKEN_IDX
 
 class BaseDataset(Dataset):
 
+    tokenizer = None
+
     def __init__(self,
                  files: str,
                  tokenizer: PreTrainedTokenizer,
