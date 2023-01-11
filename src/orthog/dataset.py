@@ -1,173 +1,40 @@
-from typing import Dict, List, Optional, Tuple, Union
+from pathlib import Path
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import torch
 from torch import Tensor
-from tqdm import tqdm
+from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizer
 
 from src.orthog.augmentation import AUGMENTATIONS
 from src.orthog.pretrained import TOKEN_IDX
 
 
-class BaseDataset(torch.utils.data.Dataset):
+class BaseDataset(Dataset):
     def __init__(self,
-                 files: Union[str, List[str]],
-                 tokenizer: PreTrainedTokenizer,
-                 targets: Dict[str, int],
+                 files: str,
                  sequence_len: int,
                  token_style: str,
                  *args,
                  **kwargs) -> None:
-
-        self.tokenizer = tokenizer
-        self.targets = targets
         self.seq_len = sequence_len
         self.token_style = token_style
 
-        if isinstance(files, list):
-            self.data = []
-            for file in files:
-                self.data += self._parse_data(file, *args, **kwargs)
-        else:
-            self.data = self._parse_data(files, *args, **kwargs)
-
-    def _parse_data(self, file_path: str, *args, **kwargs) -> List[List[List[int]]]:
-        """Parse file to train data
-
-        Args:
-            file_path (`str`): text file path that contains tokens and punctuations separated by tab in lines
-        Returns:
-            list[Batch]: each having sequence_len punctuation_mask is used to ignore special indices like padding and intermediate sub-word token during evaluation
-        """
-        with open(file_path, 'r', encoding='utf-8') as file:
-            data = file.read().split("\n")
-            x, y = [], []
-            for i, line in enumerate(data):
-                if (line := line.strip()):
-                    token = line.rsplit('\t', 1)
-                    if len(token) == 2:
-                        x.append(token[0])
-                        target = self.targets[token[1]]
-                        y.append(target)
-                    else:
-                        continue
-
-        data = self.parse_tokens(x, self.tokenizer, self.seq_len, self.token_style, y, *args, **kwargs)
-        return data
-
-    @classmethod
-    def parse_tokens(cls,
-                     tokens: Union[List[str], Tuple[str]],
-                     tokenizer: PreTrainedTokenizer,
-                     seq_len: int,
-                     token_style: str,
-                     targets: Optional[List[int]] = None,
-                     *args,
-                     **kwargs) -> List[List[List[int]]]:
-        """
-        Convert tokenized data for model prediction
-
-        Args:
-            tokens (`Union[list[str], tuple[str]]`): splited tokens
-            tokenizer (`PreTrainedTokenizer`): tokenizer which split tokens to subtokens
-            seq_len (`int`): sequence length
-            token_style (`str`): token_style from pretrained.TOKEN_IDX
-
-        Returns:
-            (`list[BatchWithoutTarget]`): list of bathces
-
-        ```txt
-        tokens    : [token  token  ##token  PAD ]
-             x    : [321    1233   23121    101 ]
-             y    : [tar    0      tar      0   ]
-        y_mask    : [1      0      1        0   ]
-        attn_mask : [1      1      1        0   ]
-        ```
-
-        """
-        data_items = []
-        # loop until end of the entire text
-        idx = 0
-
-        debug = kwargs.get('debug')
-        if debug:
-            pbar = tqdm(total=len(tokens))
-        while idx < len(tokens):
-            x = [TOKEN_IDX[token_style]['START_SEQ']]
-            w_id = [-1]  # word indexes
-            y = [0]
-            y_mask = [1] if targets else [0]
-            length_counter = len(x)
-            # loop until we have required sequence length
-            # -1 because we will have a special end of sequence token at the end
-            while length_counter < seq_len - 1 and idx < len(tokens):
-                word_pieces = tokenizer.tokenize(tokens[idx])
-
-                # if taking these tokens exceeds sequence length we finish
-                # current sequence with padding
-                # then start next sequence from this token
-                if len(word_pieces) + length_counter >= seq_len:
-                    break
-                for i in range(len(word_pieces) - 1):
-                    x.append(tokenizer.convert_tokens_to_ids(word_pieces[i]))
-                    length_counter += 1
-                    w_id.append(idx)
-                    y.append(0)
-                    y_mask.append(0)
-                if len(word_pieces) > 0:
-                    x.append(tokenizer.convert_tokens_to_ids(word_pieces[-1]))
-                    length_counter += 1
-                else:
-                    x.append(TOKEN_IDX[token_style]['UNK'])
-                    length_counter += 1
-
-                w_id.append(idx)
-
-                if targets:
-                    y.append(targets[idx])
-                else:
-                    y.append(0)
-
-                y_mask.append(1)
-
-                idx += 1
-                if debug:
-                    pbar.update(1)
-
-            x.append(TOKEN_IDX[token_style]['END_SEQ'])
-            length_counter += 1
-            w_id.append(-1)
-            y.append(0)
-            if targets:
-                y_mask.append(1)
-            else:
-                y_mask.append(0)
-
-            # Fill with pad tokens
-            if length_counter < seq_len:
-                x = x + [TOKEN_IDX[token_style]['PAD'] for _ in range(seq_len - len(x))]
-                w_id = w_id + [-100 for _ in range(seq_len - len(w_id))]
-                y = y + [0 for _ in range(seq_len - len(y))]
-                y_mask = y_mask + [0 for _ in range(seq_len - len(y_mask))]
-
-            attn_mask = [1 if token != TOKEN_IDX[token_style]['PAD'] else 0 for token in x]
-
-            data_items.append([x, w_id, attn_mask, y, y_mask])
-
-        if debug:
-            pbar.close()
-
-        return data_items
+        self.data_x = np.load(str(Path(files) / "aug.npy"))
+        self.data_y = np.load(str(Path(files) / "clear.npy"))
+        assert self.data_x.shape[0] == self.data_y.shape[0]
 
     def __len__(self) -> int:
-        return len(self.data)
+        return self.data_x.shape[0]
 
     def __getitem__(self, index: int) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
-        x = self.data[index][0]
-        attn_mask = self.data[index][2]
-        y = self.data[index][3]
-        y_mask = self.data[index][4]
+        x = self.data_x[index]
+        attn_mask = np.zeros(x.shape)
+        attn_mask[x != TOKEN_IDX[self.token_style]['PAD']] = 1
+        y = self.data_y[index]
+        y_mask = np.zeros(y.shape)
+        y_mask[y != TOKEN_IDX[self.token_style]['PAD']] = 1
 
         x = torch.tensor(x)  # type: ignore
         attn_mask = torch.tensor(attn_mask)  # type: ignore
@@ -179,7 +46,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
 class ReorthDataset(BaseDataset):
     def __init__(self,
-                 files: Union[str, List[str]],
+                 file: Union[str, List[str]],
                  tokenizer: PreTrainedTokenizer,
                  targets: Dict[str, int],
                  sequence_len: int,
@@ -192,16 +59,14 @@ class ReorthDataset(BaseDataset):
         """Preprocess data for restore punctuation
 
         Args:
-            files (`Union[str, list[str]]`): single file or list of text files containing tokens and punctuations separated by tab in lines
-            tokenizer (`PreTrainedTokenizer`): tokenizer that will be used to further tokenize word for BERT like models
-            targets (`dict[str, int]`): dict with targets
+            file (`str`): single file or list of text files containing tokens and punctuations separated by tab in lines
             sequence_len (`int`): length of each sequence
             token_style (`str`): For getting index of special tokens in pretrained.TOKEN_IDX
             is_train (`bool, optional`): if false do not apply augmentation. Defaults to False.
             augment_rate (`float, optional`): percent of data which should be augmented. Defaults to 0.0.
             augment_type (`str, optional`): augmentation type. Defaults to 'substitute'.
         """
-        super().__init__(files, tokenizer, targets, sequence_len, token_style, *args, **kwargs)
+        super().__init__(file, sequence_len, token_style, *args, **kwargs)
 
         self.is_train = is_train
         self.augment_type = augment_type
@@ -235,10 +100,12 @@ class ReorthDataset(BaseDataset):
         return x_aug, y_aug, attn_mask, y_mask_aug
 
     def __getitem__(self, index: int) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
-        x = self.data[index][0]
-        attn_mask = self.data[index][2]
-        y = self.data[index][3]
-        y_mask = self.data[index][4]
+        x = self.data_x[index]
+        attn_mask = np.zeros(x.shape)
+        attn_mask[x != TOKEN_IDX[self.token_style]['PAD']] = 1
+        y = self.data_y[index]
+        y_mask = np.zeros(y.shape)
+        y_mask[y != TOKEN_IDX[self.token_style]['PAD']] = 1
 
         if self.is_train and self.augment_rate > 0:
             x, y, attn_mask, y_mask = self._augment(x, y, y_mask)
